@@ -1,0 +1,255 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using HtmlAgilityPack;
+using System.Diagnostics;
+using System.Threading;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using System.Configuration;
+
+namespace NetDeckNavigator
+{
+    public class NetDeckNavigatorLib
+    {
+        public class Deck
+        {   
+            public string Category;
+            public string Name;
+            public string Class;
+            public string Type;
+            public string Cost;
+            public List<Card> Cards;
+            public int? Order;
+        }
+
+        public class Card
+        {
+            public Card(string name)
+            {
+                this.Name = name;
+            }
+
+            public string Name;
+            public string SearchName;
+        }
+
+        public class ClassUrl
+        {
+            //Hot Decks
+            //Druid: http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=4
+            //Hunter : http://www.hearthpwn.com/decks?filter-deck-tag=1&&filter-class=8
+            //Mage : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=16
+            //Paladin : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=32
+            //Priest : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=64
+            //Rogue : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=128
+            //Shaman : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=256
+            //Warlock : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=512
+            //Warrior : http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=1024
+            //Mine : http://www.hearthpwn.com/members/erax0r/decks
+
+            public string Website;
+            public string Class;
+            public string Url;
+        }
+
+        public static HtmlWeb Web = new HtmlWeb();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern bool SetCursorPos(int x, int y);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+        public const int MOUSEEVENTF_LEFTDOWN = 0x02;
+        public const int MOUSEEVENTF_LEFTUP = 0x04;
+
+        [DllImport("user32.dll")]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+        public static void BringToFront(Process pTemp)
+        {
+            SetForegroundWindow(pTemp.MainWindowHandle);
+        }
+
+        public static List<Deck> GetMyHearthPwnDecks()
+        {
+            string deckUrl = "http://www.hearthpwn.com/members/erax0r/decks";
+            var decks = new List<Deck>();
+            HtmlWeb web = new HtmlWeb();
+            HtmlAgilityPack.HtmlDocument doc = web.Load(deckUrl);
+            Parallel.ForEach(doc.DocumentNode.SelectNodes("//a[@href]").Where(a => a.OuterHtml.Contains("/decks/")), link =>
+            {
+                decks.Add(GetHearthPwnDeck(string.Concat("http://www.hearthpwn.com", link.Attributes[0].Value), "mine",99));
+            });
+
+            return decks;
+        }
+
+        public static List<Deck> GetHearthPwnPopularDecks()
+        {
+            string deckUrl = "http://www.hearthpwn.com/decks?filter-deck-tag=1";
+            var decks = new List<Deck>();
+            HtmlWeb web = new HtmlWeb();
+            HtmlAgilityPack.HtmlDocument doc = web.Load(deckUrl);
+            Parallel.ForEach(doc.DocumentNode.SelectNodes("//a[@href]").Where(a => a.OuterHtml.Contains("/decks/")), link =>
+                {
+                    decks.Add(GetHearthPwnDeck(string.Concat("http://www.hearthpwn.com",link.Attributes[0].Value),"hot",99));
+                });
+
+            return decks;
+        }
+
+        public static List<Deck> GetAllHearthPwnDecks()
+        {
+            var decks = new List<Deck>();
+            var urls = new List<ClassUrl>();
+            urls.Add(new ClassUrl() { Class = "hot", Url = "http://www.hearthpwn.com/decks", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "druid", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=4", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "hunter", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=8", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "mage", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=16", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "paladin", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=32", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "priest", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=64", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "rogue", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=128", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "shaman", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=256", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "warlock", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=512", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "warrior", Url = "http://www.hearthpwn.com/decks?filter-deck-tag=1&filter-class=1024", Website = "hearthpwn" });
+            urls.Add(new ClassUrl() { Class = "mine", Url = "http://www.hearthpwn.com/members/erax0r/decks", Website = "hearthpwn" });
+
+            //foreach (var classUrl in urls)
+            //{
+            //    string deckUrl = classUrl.Url;
+            //    HtmlAgilityPack.HtmlDocument doc = Web.Load(deckUrl);
+            //    foreach (var link in doc.DocumentNode.SelectNodes("//a[@href]").Where(a => a.OuterHtml.Contains("/decks/")))
+            //    {
+            //        try
+            //        {
+            //            decks.Add(GetHearthPwnDeck("http://www.hearthpwn.com" + link.Attributes[0].Value, classUrl.Class,0));
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            Console.WriteLine(ex.Message);
+            //        }
+            //    }
+            //}
+
+			//todo: this is the bottle neck of the app
+			Parallel.ForEach(urls, classUrl =>
+			{
+				int i = 0;
+				string deckUrl = classUrl.Url;
+				HtmlAgilityPack.HtmlDocument doc = Web.Load(deckUrl);
+				foreach (var link in doc.DocumentNode.SelectNodes("//a[@href]").Where(a => a.OuterHtml.Contains("/decks/")))
+				{
+					try
+					{
+						decks.Add(GetHearthPwnDeck("http://www.hearthpwn.com" + link.Attributes[0].Value, classUrl.Class, i));
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine(ex.Message);
+					}
+					i++;
+				}
+			});
+
+            return decks;
+        }
+
+        /// <summary>
+        /// Get a deck object by sending a hearthpwn URL
+        /// </summary>
+        /// <param name="url">URL of the HearthPwn Deck</param>
+        /// <returns></returns>
+        public static Deck GetHearthPwnDeck(string url, string category, int order)
+        {
+            HtmlAgilityPack.HtmlDocument doc = Web.Load(url);
+            var deck = new Deck();
+            deck.Order = order;
+            deck.Category = category;
+            deck.Name = CleanFileName(doc.DocumentNode.SelectSingleNode("//*[@id=\"content\"]/section/div/header[1]/h2").InnerText);
+            deck.Type = doc.DocumentNode.SelectSingleNode("//*[@id=\"content\"]/section/div/aside/section[3]/ul/li[1]/span").InnerText;
+            deck.Class = doc.DocumentNode.SelectSingleNode("//*[@id=\"content\"]/section/div/aside/section[4]/h4").InnerText.Replace(" Cards","");            
+            var tempCost  = doc.DocumentNode.SelectSingleNode("//*[@id=\"content\"]/section/div/aside/section[3]/ul/li[2]/text()").InnerText;
+            deck.Cost = tempCost.Trim().Replace(Environment.NewLine,"").Replace("Crafting Cost: ","");
+           
+            var cards = new List<Card>();
+            deck.Cards = cards;
+
+            //dont even think of parrallel this it wont work
+            foreach (HtmlNode link in doc.DocumentNode.SelectNodes("//a[@href]").Where(a => a.OuterHtml.Contains("/cards/")))
+            {
+                if (!link.InnerText.Contains("Ability") && !link.InnerText.Contains("Minion") && !link.InnerText.Contains("Hero") && !link.InnerText.Contains("Hero Power") && link.InnerText != "Weapon\r\n     ")
+                {
+                    if (link.ParentNode.ParentNode.Name == "td")
+                    {
+                        deck.Cards.Add(new Card(link.InnerText.Replace("&#x27;", "'")));
+                        var a = link.ParentNode.ParentNode.InnerText;
+                        if (a.Contains("× 2"))
+                            deck.Cards.Add(new Card(link.InnerText.Replace("&#x27;", "'")));
+                    }
+                }
+                else
+                {
+                    Console.WriteLine(link.InnerText);
+                }
+            }
+
+            if (deck.Cards.Count != 30)
+                Console.WriteLine("exception: deck did not have 30 cards: ", deck.Name + url + " ");
+
+            
+            return deck;
+        }
+
+        /// <summary>
+        /// Method that sends mouse movements to the screen and builds the deck inside of hearthstone
+        /// </summary>
+        /// <param name="deck"></param>
+        /// <param name="searchBoxX"></param>
+        /// <param name="searchBoxY"></param>
+        /// <param name="cardClickX"></param>
+        /// <param name="cardClickY"></param>
+        public static void BuildDeck(NetDeckNavigatorLib.Deck deck, int searchBoxX,int searchBoxY,int cardClickX,int cardClickY)
+        {
+            //f1 to bind searchbox coords
+            //f2 to bind clickBox coords
+
+            var p = Process.GetProcessesByName("Hearthstone");
+            BringToFront(p[0]);
+
+            foreach (NetDeckNavigatorLib.Card card in deck.Cards)
+            {
+                int i = 50;
+                var searchText = card.Name;
+                if (card.SearchName != null)
+                    searchText = card.SearchName;
+                System.Windows.Clipboard.SetText(searchText);
+                Thread.Sleep(i);
+                SetCursorPos(searchBoxX, searchBoxY);
+                Thread.Sleep(i);
+                mouse_event(MOUSEEVENTF_LEFTDOWN, searchBoxX, searchBoxY, 0, 0);
+                Thread.Sleep(i);
+                mouse_event(MOUSEEVENTF_LEFTUP, searchBoxX, searchBoxY, 0, 0);
+                Thread.Sleep(i);
+                SendKeys.SendWait(System.Windows.Clipboard.GetText());
+                Thread.Sleep(i);
+                SendKeys.SendWait("{ENTER}");
+                Thread.Sleep(i);
+                SetCursorPos(cardClickX, cardClickY);
+                Thread.Sleep(i);
+                mouse_event(MOUSEEVENTF_LEFTDOWN, cardClickX, cardClickY, 0, 0);
+                Thread.Sleep(i);
+                mouse_event(MOUSEEVENTF_LEFTUP, cardClickX, cardClickY, 0, 0);
+                Thread.Sleep(i);
+            }
+        }
+
+        private static string CleanFileName(string fileName)
+        {
+            return System.IO.Path.GetInvalidFileNameChars().Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
+        }
+    }
+}
+

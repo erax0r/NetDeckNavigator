@@ -1,0 +1,543 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Net;
+using System.Security.Principal;
+using System.Drawing;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Forms.VisualStyles;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Windows.Forms;
+using System.Configuration;
+using System.Net.Http;
+using System.Windows.Threading;
+using HtmlAgilityPack;
+using System.IO;
+using System.Threading;
+using NetDeckNavigator;
+using System.Runtime.InteropServices;
+using System.Reflection;
+
+namespace NetDeckNavigator
+{
+
+	/// <summary>
+	/// Interaction logic for MainWindow.xaml
+	/// </summary>
+	public partial class MainWindow : Window
+	{   
+		public string HearthPwnHtml;
+		public string TopDeckHtml;
+		public bool IsHearthPwnButtonsGenerated;
+		public bool IsCacheChecked;
+		public bool InitialLoadComplete;
+		public static string DeckPath = System.Windows.Forms.Application.StartupPath + "//cache//hearthpwn//";
+		public static List<NetDeckNavigatorLib.Deck> HearthPwnDecks = new List<NetDeckNavigatorLib.Deck>();
+		public static int SearchBoxX = 0;
+        public static int SearchBoxY = 0;
+		public static int CardClickX = 0;
+		public static int CardClickY = 0;
+		public static int BuildSpeed = 50;
+		public static string HearthPwnUserName = "default";
+		
+        protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
+        {
+			//todo: implement global hotkeys http://www.dreamincode.net/forums/topic/180436-global-hotkeys/
+			//http://pastebin.com/mXatTCmz
+            base.OnKeyDown(e);
+            if (e.Key == Key.F1)
+            {
+                SearchBoxX = System.Windows.Forms.Cursor.Position.X;
+                SearchBoxY = System.Windows.Forms.Cursor.Position.Y;
+                System.Windows.MessageBox.Show("SearchBox set to x=" + SearchBoxX + " y=" + SearchBoxY);
+            }
+
+            if (e.Key == Key.F2)
+            {
+                CardClickX = System.Windows.Forms.Cursor.Position.X;
+                CardClickY = System.Windows.Forms.Cursor.Position.Y;
+                System.Windows.MessageBox.Show("CardClick Location set to x=" + CardClickX + " y=" + CardClickY);
+            }
+        }
+        
+		public MainWindow()
+		{
+			if (!IsAdministrator())
+			{
+				System.Windows.MessageBox.Show("Not running as Administrator. Please restart application.");
+				throw new Exception("Elevation Privilege is insufficient.");
+			}
+			SetupConfiguration();
+			InitializeComponent();
+		}
+
+		private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+
+			if (CheckLocalDeckCache() && InitialLoadComplete == false)
+			{
+				GenerateHearthPwnDeckObjects();
+				CleanUpHearthPwnObjects();
+				GenerateHearthPwnButtons();
+				InitialLoadComplete = true;
+			}
+
+		}
+
+		private void SetupConfiguration()
+		{
+			HearthPwnUserName = ConfigurationManager.AppSettings["HearthPwnUserName"];
+			BuildSpeed =  Convert.ToInt32(ConfigurationManager.AppSettings["BuildSpeed"]);
+			SearchBoxX = Convert.ToInt32(ConfigurationManager.AppSettings["SearchBoxX"]);
+			SearchBoxY = Convert.ToInt32(ConfigurationManager.AppSettings["SearchBoxY"]);
+			CardClickX = Convert.ToInt32(ConfigurationManager.AppSettings["CardClickX"]);
+			CardClickY = Convert.ToInt32(ConfigurationManager.AppSettings["CardClickY"]);
+		}
+
+        private void CleanUpHearthPwnObjects()
+        {
+            //set the searchtext for cards where the name of the card is not enough to find by
+            foreach (var deck in HearthPwnDecks.Where(a => a.Class.ToLower() == "warrior"))
+            {
+                foreach(var card in deck.Cards.Where(a => a.Name == "Slam"))
+                    card.SearchName = "if it survives";                
+            }
+        }
+
+		private bool CheckLocalDeckCache()
+		{
+
+			if (IsCacheChecked == true)
+				return true;
+
+            CreateCacheDirectories();
+
+			if (System.IO.Directory.GetFiles(DeckPath + "hot//").Count(a => a.Any()) > 0)
+			{
+				IsCacheChecked = true;
+				return true;
+			}
+
+			return false;
+		}
+
+		private void ClearCache(object sender, RoutedEventArgs e)
+		{
+			var button = sender as System.Windows.Controls.Button;
+			string type = button.Tag.ToString();
+			button.IsEnabled = false;
+			RefreshLocalCache();
+			button.IsEnabled = true;
+		}
+
+        private static void CreateCacheDirectories()
+        {
+            string cachePath = System.Windows.Forms.Application.StartupPath + "//cache//hearthpwn//";
+
+	        foreach (var item in Enums.HearthstoneClasses)
+	        {
+
+				if (!Directory.Exists(cachePath + "//" + item + "//"))
+					Directory.CreateDirectory(cachePath + "//" + item + "//");		        
+	        }
+
+            if (!Directory.Exists(cachePath))
+                Directory.CreateDirectory(cachePath);
+
+            if (!Directory.Exists(cachePath + "//exceptions//"))
+                Directory.CreateDirectory(cachePath + "//exceptions//");
+
+            if (!Directory.Exists(cachePath + "//hot//"))
+                Directory.CreateDirectory(cachePath + "//hot//");
+
+			if (!Directory.Exists(cachePath + "//mine//"))
+				Directory.CreateDirectory(cachePath + "//mine//");
+        }
+
+		private static void CacheDeck(NetDeckNavigatorLib.Deck deck)
+		{
+            string newDeckPath = DeckPath + "\\" + deck.Category + "\\";
+
+            if (deck.Category == "exceptions")
+            {
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Name + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Class + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Type + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Cost + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Category + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Order + Environment.NewLine);
+                foreach (var card in deck.Cards)
+                    File.AppendAllText(newDeckPath + deck.Name + ".deck", card.Name + Environment.NewLine);
+                return;
+            }
+
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Name + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Class + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Type + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Cost + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Category + Environment.NewLine);
+                File.AppendAllText(newDeckPath + deck.Name + ".deck", deck.Order + Environment.NewLine);
+				foreach (var card in deck.Cards)
+                    File.AppendAllText(newDeckPath + deck.Name + ".deck", card.Name + Environment.NewLine);
+                return;
+
+		}
+
+		private void RefreshLocalCache()
+		{
+			foreach (var file in Directory.GetFiles(DeckPath+ "//hot//"))
+				File.Delete(file);
+
+			foreach (var file in Directory.GetFiles(DeckPath + "//mine//"))
+				File.Delete(file);
+
+			foreach (var item in Enums.HearthstoneClasses)
+			{
+				foreach (var file in Directory.GetFiles(DeckPath + "//" + item + "//"))
+					File.Delete(file);				
+			}
+
+            //hot
+            List<UIElement> hotDelItems = new List<UIElement>();
+			foreach (UIElement uiElement in spPwnHot.Children)
+			{
+                hotDelItems.Add(uiElement);
+			}
+            foreach (UIElement delItem in hotDelItems)
+			{
+				spPwnHot.Children.Remove(delItem);
+			}
+
+            //druid
+            List<UIElement> druidDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnDruid.Children)
+            {
+                druidDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in druidDelItems)
+            {
+                spPwnDruid.Children.Remove(delItem);
+            }
+
+            //hunter
+            List<UIElement> hunterdelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnHunter.Children)
+            {
+                hunterdelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in hunterdelItems)
+            {
+                spPwnHunter.Children.Remove(delItem);
+            }
+
+            //mage
+            List<UIElement> mageDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnMage.Children)
+            {
+                mageDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in mageDelItems)
+            {
+                spPwnMage.Children.Remove(delItem);
+            }
+
+            //paladin
+            List<UIElement> paladinDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnPaladin.Children)
+            {
+                paladinDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in paladinDelItems)
+            {
+                spPwnPaladin.Children.Remove(delItem);
+            }
+
+            //priest
+            List<UIElement> priestDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnPriest.Children)
+            {
+                priestDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in priestDelItems)
+            {
+                spPwnPriest.Children.Remove(delItem);
+            }
+
+            //rogue
+            List<UIElement> rogueDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnRogue.Children)
+            {
+                rogueDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in rogueDelItems)
+            {
+                spPwnRogue.Children.Remove(delItem);
+            }
+
+            //shaman
+            List<UIElement> shamanDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnShaman.Children)
+            {
+                shamanDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in shamanDelItems)
+            {
+                spPwnShaman.Children.Remove(delItem);
+            }
+
+            //warlock
+            List<UIElement> warlockDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnWarlock.Children)
+            {
+                warlockDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in warlockDelItems)
+            {
+                spPwnWarlock.Children.Remove(delItem);
+            }
+
+            //warrior
+            List<UIElement> warriorDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnWarrior.Children)
+            {
+                warriorDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in warriorDelItems)
+            {
+                spPwnWarrior.Children.Remove(delItem);
+            }
+
+            //mine
+            List<UIElement> mineDelItems = new List<UIElement>();
+            foreach (UIElement uiElement in spPwnMine.Children)
+            {
+                mineDelItems.Add(uiElement);
+            }
+            foreach (UIElement delItem in mineDelItems)
+            {
+                spPwnMine.Children.Remove(delItem);
+            }
+
+			IsHearthPwnButtonsGenerated = false;
+			HearthPwnDecks.RemoveAll(a => a.Name.Any());
+			
+			//start worker thread here
+
+			GenerateHearthPwnCache();
+			GenerateHearthPwnButtons();
+
+			System.Windows.MessageBox.Show("Decks Loadded!");
+		}
+
+
+        private static void GenerateHearthPwnCache()
+        {
+            if (HearthPwnDecks.Count == 0)
+            {
+                //HearthPwnDecks = NetDeckNavigatorLib.GetHearthPwnPopularDecks();
+                HearthPwnDecks = NetDeckNavigatorLib.GetAllHearthPwnDecks();                
+                //HearthPwnDecks = NetDeckNavigatorLib.GetMyHearthPwnDecks();  
+                foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30)) //only decks that have 30 cards.
+                {
+                    CacheDeck(deck);
+                }
+
+                foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count != 30)) //only decks that have 30 cards.
+                {
+                    deck.Category = "exceptions";
+                    CacheDeck(deck);
+                }
+            }
+        }
+
+		private static void GenerateHearthPwnDeckObjects()
+		{
+			foreach (var item in System.IO.Directory.GetFiles(DeckPath + "//hot//"))
+				HearthPwnDecks.Add(FileToDeck(item));
+
+			foreach (var item in System.IO.Directory.GetFiles(DeckPath + "//mine//"))
+				HearthPwnDecks.Add(FileToDeck(item));
+
+			foreach (var item in Enums.HearthstoneClasses)
+			{
+				foreach (var thing in System.IO.Directory.GetFiles(DeckPath + "//" + item + "//"))
+					HearthPwnDecks.Add(FileToDeck(thing));				
+			}
+		}
+
+		private static NetDeckNavigatorLib.Deck FileToDeck(string file)
+		{
+			var deck = new NetDeckNavigatorLib.Deck();
+			deck.Name = System.IO.Path.GetFileNameWithoutExtension(file);
+			deck.Cards = new List<NetDeckNavigatorLib.Card>();
+			int i = 0;
+			foreach (var line in File.ReadAllLines(file))
+			{
+				if (i == 0)
+				{
+					deck.Name = line;
+					i++;
+					continue;
+				}
+
+				if (i == 1)
+				{
+					deck.Class = line;
+					i++;
+					continue;
+				}
+
+				if (i == 2)
+				{
+					deck.Type = line;
+					i++;
+					continue;
+				}
+
+                if (i == 3)
+                {
+                    deck.Cost = line;
+                    i++;
+                    continue;
+                }
+
+                if (i == 4)
+                {
+                    deck.Category = line;
+                    i++;
+                    continue;
+                }
+
+                if (i == 5)
+                {
+                    try
+                    {
+                        deck.Order = Convert.ToInt32(line);
+                    }
+                    catch
+                    {
+                        //ignore
+                    }
+                    i++;
+                    continue;
+                }
+				deck.Cards.Add(new NetDeckNavigatorLib.Card(line));                
+                i++;
+			}
+
+			return deck;
+		}
+
+		private void GenerateHearthPwnButtons()
+		{
+			if (IsHearthPwnButtonsGenerated)
+				return;
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "hot").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnHot.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "druid").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnDruid.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "hunter").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnHunter.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "mage").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnMage.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "paladin").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnPaladin.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "priest").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnPriest.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "rogue").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnRogue.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "shaman").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnShaman.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "warlock").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnWarlock.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "warrior").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnWarrior.Children.Add(DeckToButton(deck));
+			}
+
+			foreach (var deck in HearthPwnDecks.Where(a => a.Cards.Count == 30 && a.Category == "mine").OrderBy(a => a.Order)) //only decks that have 30 cards.
+			{
+				spPwnMine.Children.Add(DeckToButton(deck));
+			}
+
+			IsHearthPwnButtonsGenerated = true;
+		}
+
+		private static System.Windows.Controls.Button DeckToButton(NetDeckNavigatorLib.Deck deck)
+		{
+			var btn = new System.Windows.Controls.Button();
+			btn.Tag = deck;
+			btn.Width = 500;
+			btn.Height = 25;
+			btn.Content = deck.Class + " | " + deck.Type + " | " + deck.Cost + " | " + deck.Name.Replace("&#x27;","'");
+			btn.Click += btn_Click;            
+			return btn;
+		}
+
+		static void btn_Click(object sender, RoutedEventArgs e)
+		{
+			var button = sender as System.Windows.Controls.Button;
+			var deck = (NetDeckNavigatorLib.Deck)button.Tag;
+			NetDeckNavigatorLib.BuildDeck(deck,SearchBoxX,SearchBoxY,CardClickX,CardClickY);
+		}
+
+		private void MenuItemAboutClicked(object sender, RoutedEventArgs e)
+		{
+			AboutBox box = new AboutBox();
+			box.Show();
+		}
+
+		private void MenuItemOptionsClicked(object sender, RoutedEventArgs e)
+		{
+			Options box = new Options();
+			box.Owner = this;
+			box.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+			box.Show();
+		}
+
+		private static bool IsAdministrator()
+		{
+			var identity = WindowsIdentity.GetCurrent();
+			var principal = new WindowsPrincipal(identity);
+			return principal.IsInRole(WindowsBuiltInRole.Administrator);
+		}
+	}
+}

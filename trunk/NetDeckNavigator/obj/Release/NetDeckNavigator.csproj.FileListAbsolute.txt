@@ -1,0 +1,13 @@
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\bin\Release\NetDeckNavigator.exe.config
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\bin\Release\NetDeckNavigator.exe
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\bin\Release\NetDeckNavigator.pdb
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\MainWindow.g.cs
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\App.g.cs
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator_MarkupCompile.cache
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator_MarkupCompile.lref
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\MainWindow.baml
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator.g.resources
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator.Properties.Resources.resources
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator.csproj.GenerateResource.Cache
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator.exe
+C:\svn2\netdecknavigator\trunk\NetDeckNavigator\obj\Release\NetDeckNavigator.pdb

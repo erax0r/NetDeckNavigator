@@ -1,0 +1,193 @@
+﻿<Window x:Class="NetDeckNavigator.MainWindow"
+		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:netDeckNavigator="clr-namespace:NetDeckNavigator"
+		Title="NetDeck Navigator" Height="500" Width="685" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Topmost="False"
+		WindowStyle="SingleBorderWindow">
+	<Window.Background>
+		<SolidColorBrush Opacity="0.3" Color="White"/>
+	</Window.Background>
+	<DockPanel>
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="_File">
+				<MenuItem Header="_Close"/>
+			</MenuItem>
+			<MenuItem Header="_Edit">
+				<MenuItem Header="_Preferences" Click ="MenuItemOptionsClicked"/>			
+			</MenuItem>
+			<MenuItem Header="_Help">
+				<MenuItem Header="_About" Click ="MenuItemAboutClicked"/>
+			</MenuItem>
+		</Menu>
+		<TabControl HorizontalAlignment="Left"
+			Height="400"
+			Margin="10,10,0,0"
+			VerticalAlignment="Top"
+			Width="650"
+			>
+		<TabItem Header="Main">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spMain" HorizontalAlignment="Center" >
+						<StackPanel.Resources>
+							<Style TargetType="{x:Type Button}">
+								<Setter Property="Margin" Value="0,125,0,0"/>
+							</Style>
+							<Style TargetType="{x:Type ProgressBar}">
+								<Setter Property="Margin" Value="0,10,0,0"/>
+							</Style>
+							</StackPanel.Resources>
+						<Button Height ="103" Width="263" Name="btnGetDecks" Content="Get Decks!" Click ="ClearCache" Tag="hearthpwn"/>
+						<!--<ProgressBar Name ="pbarMainWindow" IsIndeterminate="False" Maximum="100" Value="0" Height="10" Width="263"/>-->
+						<ProgressBar Name ="pbarMainWindow" IsIndeterminate="False" Maximum="100" Value="0" Height="10" Width="263"/>
+							<TextBlock Name="txtStatus" Text="Status: "/>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Hot">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnHot" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Druid">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnDruid" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Hunter">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnHunter" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Mage">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnMage" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Paladin">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnPaladin" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Priest">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnPriest" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Rogue">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnRogue" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Shaman">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnShaman" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Warlock">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnWarlock" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="Warrior">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnWarrior" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+		<TabItem Header="My Decks">
+			<Grid Background="#FFE5E5E5">
+				<ScrollViewer  >
+					<StackPanel Name="spPwnMine" HorizontalAlignment="Center">
+							<StackPanel.Resources>
+								<Style TargetType="{x:Type Button}">
+									<Setter Property="Margin" Value="0,2,0,0"/>
+								</Style>
+							</StackPanel.Resources>
+						</StackPanel>
+				</ScrollViewer  >
+			</Grid>
+		</TabItem>
+	</TabControl>
+	</DockPanel>
+</Window>
